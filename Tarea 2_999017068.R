@@ -34,3 +34,10 @@ data.frame(1:ncol(datos_maestria),colnames(datos))
 datos_maestria <- datos_maestria[,-3]
 reglas5 <- apriori(datos_maestria, parameter = list(support=0.2, confidence = 0.5))
 inspect(reglas5[0:53])
+
+
+datos_capital <- subset(datos, Departamento == "Guatemala")
+data.frame(1:ncol(datos_capital),colnames(datos))
+datos_maestria <- datos_capital[,-3]
+reglas6 <- apriori(datos_capital, parameter = list(support=0.2, confidence = 0.5))
+inspect(reglas6[0:120])
