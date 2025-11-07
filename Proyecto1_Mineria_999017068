@@ -137,3 +137,18 @@ ggplot(datos_gastro_cluster, aes(x = mes, y = deptoresiden, color =as.factor(clu
   geom_point(data = as.data.frame(cluster_gastro$centers), aes(x = mes, y = deptoresiden), color="black", size=4, shape=17)+
   labs(title = "Casos de gastro y su relación en los meses vs departamentos de los casos") +
   theme_minimal()
+
+#Caso 2: Los tipos de consultas y en que mes suceden
+datos_meses <- datos[,c("edad","tipo_consulta","pueblo_pertenencia","mes")]
+datos_meses <- subset(datos_meses, ano == 2023)
+datos_meses[is.na(datos_meses)] <- -1
+cluster_meses <- kmeans(datos_meses, centers = 2)
+
+datos_meses$deptoresiden <- factor(datos_meses$deptoresiden)
+
+
+ggplot(datos_meses, aes(x = mes, y = tipo_consulta, color =as.factor(cluster_meses$cluster)))+
+  geom_point()+
+  geom_point(data = as.data.frame(cluster_meses$centers), aes(x = mes, y = tipo_consulta), color="black", size=4, shape=17)+
+  labs(title = "Casos de gastro y su relación en la edad de pacientes vs departamentos de los casos") +
+  theme_minimal()
