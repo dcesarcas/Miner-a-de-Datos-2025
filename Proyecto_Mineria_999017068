@@ -1,0 +1,153 @@
+library(arules)
+library(ggplot2)
+library(readxl)
+library(utf8)
+library(tidyverse)
+library(janitor)
+
+
+ruta <- "C:\\Users\\Daniel\\Downloads\\data"   
+archivos <- list.files(ruta, pattern = "\\.xlsx$", full.names = TRUE)
+
+leer_limpio <- function(path){
+  read_excel(path) |> 
+    clean_names() |> 
+    mutate(source_file = basename(path))
+}
+base_unificada <- map_dfr(archivos, leer_limpio)
+
+base_unificada <- base_unificada |>
+  mutate(
+    ano = as.integer(ano),
+    mes = as.character(mes),
+    edad = as.integer(edad)
+  ) |>
+  distinct()
+write_csv(base_unificada, "C:\\Users\\Daniel\\Downloads\\base_unificada.csv")
+
+datos <- select(base_unificada, -last_col())
+
+datos <- datos %>%
+  rename(
+    pueblo_pertenencia = ppertenencia,
+    periodo_edad = periodoeda,
+    municipio_residencia = muniresiden,
+    tipo_consulta = tc,
+    causa_atencion = caufin
+    
+  )
+
+# Convertir las variables a factores
+datos$sexo <- as.factor(datos$sexo)
+datos$pueblo_pertenencia <- as.factor(datos$pueblo_pertenencia)
+datos$tipo_consulta <- as.factor(datos$tipo_consulta)
+datos$periodo_edad <- as.factor(datos$periodo_edad)
+datos$causa_atencion <- as.factor(datos$causa_atencion)
+datos$municipio_residencia <- as.factor(datos$municipio_residencia)
+datos$edad <- as.factor(datos$edad)
+datos$mes <- as.factor(datos$mes)
+datos$ano <- as.factor(datos$ano)
+datos$deptoresiden <- as.factor(datos$deptoresiden)
+
+#PARTE 1 PROYECTO CON APRIORI
+
+str(datos)
+
+reglas <- apriori(datos, parameter = list(support=0.1, confidence = 0.5))
+inspect(reglas[0:138])
+#Encontrar las causas más comunes en las enfermedades
+summary(datos$causa_atencion)
+
+
+#Casos de emergencia 
+datos_emergencia <- subset(datos, tipo_consulta == 3 )
+datos_emergencia <- datos_emergencia[,-9]
+reglas_emergencia <- apriori(datos_emergencia, parameter = list(support=0.1, confidence = 0.5))
+inspect(reglas_emergencia[0:44])
+#{pueblo_pertenencia=1, deptoresiden=[1,10)}      => {sexo=2}               0.1134367 0.5656141  0.2005550 1.0209838  42024
+
+
+#Casos fuera de la capital y en menores de dos años
+datos_ncapital <- subset(datos, deptoresiden !=1 )
+datos_ncapital <- subset(datos_ncapital, periodo_edad !=3 )
+reglas_ncapital <- apriori(datos_ncapital, parameter = list(support=0.1, confidence = 0.5))
+inspect(reglas_ncapital[0:57])
+#{pueblo_pertenencia=1, periodo_edad=2}     => {sexo=1}               0.1702151 0.5348569  0.3182441
+#{pueblo_pertenencia=1, periodo_edad=2, tipo_consulta=1} => {sexo=1}      0.1069272 0.5290721  0.2021033
+
+
+#Caso para niñas
+b <- subset(datos, sexo == 2)
+b <- b[,-3]
+reglas_b <- apriori(b, parameter = list(support=0.1, confidence = 0.5))
+inspect(reglas_b[0:66])
+#[48] {pueblo_pertenencia=1,periodo_edad=3}             => {tipo_consulta=1}      0.1218569  0.6539347 0.1863441 1.0861869  395021
+
+
+
+#PARTE 2 FP-GROWTH
+#Caso 1 Emergencias en la capital
+datos_mayores_emergencias <- subset(datos, tipo_consulta == 3)
+datos_mayores_emergencias <- subset(datos_mayores_emergencias, deptoresiden == 1)
+datos_mayores_emergencias <- datos_mayores_emergencias[,c("edad","mes","sexo","causa_atencion")]
+reglas_fp <- fim4r(datos_mayores_emergencias, method="fpgrowth", target ="rules", supp =0.01, conf=.5)
+rf <- as(reglas_fp, "data.frame")
+#{causa_atencion=I10X} => {sexo=2} 0.01205099 0.6230143 1.1447037 1608
+
+
+
+#Caso 2 para Gastroenteritis y colitis de origen no especificado
+datos_gastro <- subset(datos, causa_atencion ==  "A099")
+datos_gastro <- datos_gastro[,c("edad","mes","deptoresiden","tipo_consulta")]
+reglas_gastro <- fim4r(datos_gastro, method="fpgrowth", target ="rules", supp =0.001, conf=.5)
+rf_gastro <- as(reglas_gastro, "data.frame")
+#353 {mes=11,deptoresiden=11} => {tipo_consulta=3} 0.001027985 0.5773196 2.971024
+
+#Caso 3 causas de atencion en recien nacidos fuera de la capital
+datos_recien_nacidos <- subset(datos, periodo_edad == 1)
+datos_recien_nacidos <- subset(datos_recien_nacidos, deptoresiden != 1)
+datos_recien_nacidos <- datos_recien_nacidos[,c("edad","mes","tipo_consulta","causa_atencion","deptoresiden")]
+reglas_recien_nacidos <- fim4r(datos_recien_nacidos, method="fpgrowth", target ="rules", supp =0.01, conf=.5)
+rf_recien_nacidos <- as(reglas_recien_nacidos, "data.frame")
+#{causa_atencion=P819,deptoresiden=7} => {tipo_consulta=3} 0.01178203 0.9887640 4.8618029
+
+#Caso 4 causas de atencion en xinkas
+datos_xinka <- subset(datos, pueblo_pertenencia == 3)
+datos_xinka <- datos_xinka[,c("edad","mes","tipo_consulta","causa_atencion","deptoresiden","sexo")]
+reglas_xinka <- fim4r(datos_xinka, method="fpgrowth", target ="rules", supp =0.01, conf=.5)
+rf_xinka <- as(reglas_xinka, "data.frame")
+#{causa_atencion=L700,sexo=2} => {tipo_consulta=2} 0.03687691 0.6728538 1.186395
+
+
+
+#PARTE 3 CLUSTER
+to_numeric_fill <- function(df) {
+  df_num <- df %>% mutate(across(everything(), ~ as.numeric(as.factor(.))))
+  df_num[is.na(df_num)] <- -1
+  return(df_num)
+}
+# CASO B) Recién nacidos fuera de la capital
+# -------------------------
+base_recien_1 <- subset(datos, periodo_edad == 3)
+base_recien <- base_recien[, c("edad","mes","tipo_consulta","deptoresiden","sexo")]
+
+base_recien_num <- to_numeric_fill(base_recien)
+km_recien <- kmeans(base_recien_num, centers = 3)
+
+ggplot(
+  base_recien %>% mutate(cluster = as.factor(km_recien$cluster)),
+  aes(x = as.numeric(as.factor(edad)), 
+      y = as.numeric(as.factor(tipo_consulta)), 
+      color = cluster)
+) +
+  geom_point(alpha = 0.5) +
+  geom_point(
+    data = as.data.frame(km_recien$centers),
+    aes(x = edad, y = tipo_consulta),
+    color = "black", size = 4, shape = 17, inherit.aes = FALSE
+  ) +
+  labs(
+    title = "Cluster RN fuera de la capital: Mes vs Tipo de consulta",
+    x = "Mes (codificado)", y = "Tipo de consulta (1=Primera,2=Subsecuente,3=Emergencia)"
+  ) +
+  theme_minimal()
