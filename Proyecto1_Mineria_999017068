@@ -48,3 +48,38 @@ datos$edad <- as.factor(datos$edad)
 datos$mes <- as.factor(datos$mes)
 datos$ano <- as.factor(datos$ano)
 datos$deptoresiden <- as.factor(datos$deptoresiden)
+
+#PARTE 1 PROYECTO CON APRIORI
+
+str(datos)
+
+reglas <- apriori(datos, parameter = list(support=0.1, confidence = 0.5))
+inspect(reglas[0:138])
+#Encontrar las causas más comunes en las enfermedades
+summary(datos$causa_atencion)
+
+
+#Casos de emergencia 
+datos_emergencia <- subset(datos, tipo_consulta == 3 )
+datos_emergencia <- datos_emergencia[,-9]
+reglas_emergencia <- apriori(datos_emergencia, parameter = list(support=0.1, confidence = 0.5))
+inspect(reglas_emergencia[0:44])
+#{pueblo_pertenencia=1, deptoresiden=[1,10)}      => {sexo=2}               0.1134367 0.5656141  0.2005550 1.0209838  42024
+
+
+#Casos fuera de la capital y en menores de dos años
+datos_ncapital <- subset(datos, deptoresiden !=1 )
+datos_ncapital <- subset(datos_ncapital, periodo_edad !=3 )
+reglas_ncapital <- apriori(datos_ncapital, parameter = list(support=0.1, confidence = 0.5))
+inspect(reglas_ncapital[0:57])
+#{pueblo_pertenencia=1, periodo_edad=2}     => {sexo=1}               0.1702151 0.5348569  0.3182441
+#{pueblo_pertenencia=1, periodo_edad=2, tipo_consulta=1} => {sexo=1}      0.1069272 0.5290721  0.2021033
+
+
+#Caso para niñas
+b <- subset(datos, sexo == 2)
+b <- b[,-3]
+reglas_b <- apriori(b, parameter = list(support=0.1, confidence = 0.5))
+inspect(reglas_b[0:66])
+#[48] {pueblo_pertenencia=1,periodo_edad=3}             => {tipo_consulta=1}      0.1218569  0.6539347 0.1863441 1.0861869  395021
+
