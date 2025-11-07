@@ -83,3 +83,20 @@ reglas_b <- apriori(b, parameter = list(support=0.1, confidence = 0.5))
 inspect(reglas_b[0:66])
 #[48] {pueblo_pertenencia=1,periodo_edad=3}             => {tipo_consulta=1}      0.1218569  0.6539347 0.1863441 1.0861869  395021
 
+#PARTE 2 FP-GROWTH
+#Caso 1 Emergencias en la capital
+datos_mayores_emergencias <- subset(datos, tipo_consulta == 3)
+datos_mayores_emergencias <- subset(datos_mayores_emergencias, deptoresiden == 1)
+datos_mayores_emergencias <- datos_mayores_emergencias[,c("edad","mes","sexo","causa_atencion")]
+reglas_fp <- fim4r(datos_mayores_emergencias, method="fpgrowth", target ="rules", supp =0.01, conf=.5)
+rf <- as(reglas_fp, "data.frame")
+#{causa_atencion=I10X} => {sexo=2} 0.01205099 0.6230143 1.1447037 1608
+
+
+
+#Caso 2 para Gastroenteritis y colitis de origen no especificado
+datos_gastro <- subset(datos, causa_atencion ==  "A099")
+datos_gastro <- datos_gastro[,c("edad","mes","deptoresiden","tipo_consulta")]
+reglas_gastro <- fim4r(datos_gastro, method="fpgrowth", target ="rules", supp =0.001, conf=.5)
+rf_gastro <- as(reglas_gastro, "data.frame")
+#353 {mes=11,deptoresiden=11} => {tipo_consulta=3} 0.001027985 0.5773196 2.971024
