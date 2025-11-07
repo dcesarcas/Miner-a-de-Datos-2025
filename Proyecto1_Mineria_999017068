@@ -100,3 +100,18 @@ datos_gastro <- datos_gastro[,c("edad","mes","deptoresiden","tipo_consulta")]
 reglas_gastro <- fim4r(datos_gastro, method="fpgrowth", target ="rules", supp =0.001, conf=.5)
 rf_gastro <- as(reglas_gastro, "data.frame")
 #353 {mes=11,deptoresiden=11} => {tipo_consulta=3} 0.001027985 0.5773196 2.971024
+
+#Caso 3 causas de atencion en recien nacidos fuera de la capital
+datos_recien_nacidos <- subset(datos, periodo_edad == 1)
+datos_recien_nacidos <- subset(datos_recien_nacidos, deptoresiden != 1)
+datos_recien_nacidos <- datos_recien_nacidos[,c("edad","mes","tipo_consulta","causa_atencion","deptoresiden")]
+reglas_recien_nacidos <- fim4r(datos_recien_nacidos, method="fpgrowth", target ="rules", supp =0.01, conf=.5)
+rf_recien_nacidos <- as(reglas_recien_nacidos, "data.frame")
+#{causa_atencion=P819,deptoresiden=7} => {tipo_consulta=3} 0.01178203 0.9887640 4.8618029
+
+#Caso 4 causas de atencion en xinkas
+datos_xinka <- subset(datos, pueblo_pertenencia == 3)
+datos_xinka <- datos_xinka[,c("edad","mes","tipo_consulta","causa_atencion","deptoresiden","sexo")]
+reglas_xinka <- fim4r(datos_xinka, method="fpgrowth", target ="rules", supp =0.01, conf=.5)
+rf_xinka <- as(reglas_xinka, "data.frame")
+#{causa_atencion=L700,sexo=2} => {tipo_consulta=2} 0.03687691 0.6728538 1.186395
