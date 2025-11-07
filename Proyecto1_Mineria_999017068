@@ -1,0 +1,50 @@
+library(arules)
+library(ggplot2)
+library(readxl)
+library(utf8)
+library(tidyverse)
+library(janitor)
+
+
+ruta <- "C:\\Users\\Daniel\\Downloads\\data"   
+archivos <- list.files(ruta, pattern = "\\.xlsx$", full.names = TRUE)
+
+leer_limpio <- function(path){
+  read_excel(path) |> 
+    clean_names() |> 
+    mutate(source_file = basename(path))
+}
+base_unificada <- map_dfr(archivos, leer_limpio)
+
+base_unificada <- base_unificada |>
+  mutate(
+    ano = as.integer(ano),
+    mes = as.character(mes),
+    edad = as.integer(edad)
+  ) |>
+  distinct()
+write_csv(base_unificada, "C:\\Users\\Daniel\\Downloads\\base_unificada.csv")
+
+datos <- select(base_unificada, -last_col())
+
+datos <- datos %>%
+  rename(
+    pueblo_pertenencia = ppertenencia,
+    periodo_edad = periodoeda,
+    municipio_residencia = muniresiden,
+    tipo_consulta = tc,
+    causa_atencion = caufin
+    
+  )
+
+# Convertir las variables a factores
+datos$sexo <- as.factor(datos$sexo)
+datos$pueblo_pertenencia <- as.factor(datos$pueblo_pertenencia)
+datos$tipo_consulta <- as.factor(datos$tipo_consulta)
+datos$periodo_edad <- as.factor(datos$periodo_edad)
+datos$causa_atencion <- as.factor(datos$causa_atencion)
+datos$municipio_residencia <- as.factor(datos$municipio_residencia)
+datos$edad <- as.factor(datos$edad)
+datos$mes <- as.factor(datos$mes)
+datos$ano <- as.factor(datos$ano)
+datos$deptoresiden <- as.factor(datos$deptoresiden)
