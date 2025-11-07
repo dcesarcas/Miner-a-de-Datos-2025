@@ -121,33 +121,50 @@ rf_xinka <- as(reglas_xinka, "data.frame")
 
 
 #PARTE 3 CLUSTER
-to_numeric_fill <- function(df) {
-  df_num <- df %>% mutate(across(everything(), ~ as.numeric(as.factor(.))))
-  df_num[is.na(df_num)] <- -1
-  return(df_num)
-}
-# CASO B) Recién nacidos fuera de la capital
-# -------------------------
-base_recien_1 <- subset(datos, periodo_edad == 3)
-base_recien <- base_recien[, c("edad","mes","tipo_consulta","deptoresiden","sexo")]
+datos_cluster <- datos[,c("edad","tipo_consulta","deptoresiden")]
+datos_cluster <- subset(datos_cluster, edad != 99)
+datos_cluster <- subset(datos_cluster, tipo_consulta != 9)
+datos_cluster <- subset(datos_cluster, deptoresiden != 99)
+datos_cluster[is.na(datos_cluster)] <- -1
 
-base_recien_num <- to_numeric_fill(base_recien)
-km_recien <- kmeans(base_recien_num, centers = 3)
+datos_cluster$edad <- as.numeric(datos_cluster$edad)
+datos_cluster$tipo_consulta <- as.numeric(datos_cluster$tipo_consulta)
+datos_cluster$deptoresiden <- as.numeric(datos_cluster$deptoresiden)
 
-ggplot(
-  base_recien %>% mutate(cluster = as.factor(km_recien$cluster)),
-  aes(x = as.numeric(as.factor(edad)), 
-      y = as.numeric(as.factor(tipo_consulta)), 
-      color = cluster)
-) +
-  geom_point(alpha = 0.5) +
-  geom_point(
-    data = as.data.frame(km_recien$centers),
-    aes(x = edad, y = tipo_consulta),
-    color = "black", size = 4, shape = 17, inherit.aes = FALSE
-  ) +
-  labs(
-    title = "Cluster RN fuera de la capital: Mes vs Tipo de consulta",
-    x = "Mes (codificado)", y = "Tipo de consulta (1=Primera,2=Subsecuente,3=Emergencia)"
-  ) +
+set.seed(123)
+cl3 <- kmeans(datos_cluster, centers = 3)
+datos_cluster$cluster <- as.factor(cl3$cluster)
+
+ggplot(datos_cluster, aes(x = edad, y = deptoresiden, color = cluster))+
+  geom_point(alpha = 0.4)+
+  geom_point(data = as.data.frame(cl3$centers), 
+             aes(x = edad, y = deptoresiden),
+             color="black", size=4, shape=17, inherit.aes = FALSE)+
+  labs(title = "Cluster de pacientes con gastroenteritis: Edad vs Departamento",
+       x = "Edad del paciente",
+       y = "Departamento de residencia") +
+  theme_minimal()
+
+
+
+
+
+
+
+
+
+datos_gastro_cluster <- subset(datos, causa_atencion ==  "A099")
+datos_gastro_cluster <- subset(datos_gastro_cluster, deptoresiden == 1)
+datos_gastro_cluster <- subset(datos_gastro_cluster, periodo_edad == 3)
+datos_gastro_cluster <- datos_gastro_cluster[,c("edad","mes","municipio_residencia", "tipo_consulta","ano","pueblo_pertenencia")]
+datos_gastro_cluster[is.na(datos_gastro_cluster)] <- -1
+cluster_gastro <- kmeans(datos_gastro_cluster, centers = 2)
+
+datos_gastro_cluster$deptoresiden <- factor(datos_gastro_cluster$deptoresiden)
+
+
+ggplot(datos_gastro_cluster, aes(x = mes, y = pueblo_pertenencia, color =as.factor(cluster_gastro$cluster)))+
+  geom_point()+
+  geom_point(data = as.data.frame(cluster_gastro$centers), aes(x = mes, y = pueblo_pertenencia), color="black", size=4, shape=17)+
+  labs(title = "Casos de gastro y su relación en la edad de pacientes vs departamentos de los casos") +
   theme_minimal()
