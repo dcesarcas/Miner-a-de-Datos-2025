@@ -59,7 +59,7 @@ inspect(reglas[0:138])
 summary(datos$causa_atencion)
 
 
-#Casos de emergencia 
+#Casos 1 de emergencia 
 datos_emergencia <- subset(datos, tipo_consulta == 3 )
 datos_emergencia <- datos_emergencia[,-9]
 reglas_emergencia <- apriori(datos_emergencia, parameter = list(support=0.1, confidence = 0.5))
@@ -67,7 +67,7 @@ inspect(reglas_emergencia[0:44])
 #{pueblo_pertenencia=1, deptoresiden=[1,10)}      => {sexo=2}               0.1134367 0.5656141  0.2005550 1.0209838  42024
 
 
-#Casos fuera de la capital y en menores de dos años
+#Casos 2 y 3 fuera de la capital y en menores de dos años
 datos_ncapital <- subset(datos, deptoresiden !=1 )
 datos_ncapital <- subset(datos_ncapital, periodo_edad !=3 )
 reglas_ncapital <- apriori(datos_ncapital, parameter = list(support=0.1, confidence = 0.5))
@@ -76,7 +76,7 @@ inspect(reglas_ncapital[0:57])
 #{pueblo_pertenencia=1, periodo_edad=2, tipo_consulta=1} => {sexo=1}      0.1069272 0.5290721  0.2021033
 
 
-#Caso para niñas
+#Caso 4 para niñas
 b <- subset(datos, sexo == 2)
 b <- b[,-3]
 reglas_b <- apriori(b, parameter = list(support=0.1, confidence = 0.5))
@@ -121,50 +121,19 @@ rf_xinka <- as(reglas_xinka, "data.frame")
 
 
 #PARTE 3 CLUSTER
-datos_cluster <- datos[,c("edad","tipo_consulta","deptoresiden")]
-datos_cluster <- subset(datos_cluster, edad != 99)
-datos_cluster <- subset(datos_cluster, tipo_consulta != 9)
-datos_cluster <- subset(datos_cluster, deptoresiden != 99)
-datos_cluster[is.na(datos_cluster)] <- -1
-
-datos_cluster$edad <- as.numeric(datos_cluster$edad)
-datos_cluster$tipo_consulta <- as.numeric(datos_cluster$tipo_consulta)
-datos_cluster$deptoresiden <- as.numeric(datos_cluster$deptoresiden)
-
-set.seed(123)
-cl3 <- kmeans(datos_cluster, centers = 3)
-datos_cluster$cluster <- as.factor(cl3$cluster)
-
-ggplot(datos_cluster, aes(x = edad, y = deptoresiden, color = cluster))+
-  geom_point(alpha = 0.4)+
-  geom_point(data = as.data.frame(cl3$centers), 
-             aes(x = edad, y = deptoresiden),
-             color="black", size=4, shape=17, inherit.aes = FALSE)+
-  labs(title = "Cluster de pacientes con gastroenteritis: Edad vs Departamento",
-       x = "Edad del paciente",
-       y = "Departamento de residencia") +
-  theme_minimal()
-
-
-
-
-
-
-
-
-
+#Caso 1: enfermedad de Gastroenteritis y colitis de origen no especificado en relacion con el mes en que sucede mes y el departamento
 datos_gastro_cluster <- subset(datos, causa_atencion ==  "A099")
-datos_gastro_cluster <- subset(datos_gastro_cluster, deptoresiden == 1)
+datos_gastro_cluster <- subset(datos_gastro_cluster, deptoresiden != 99)
 datos_gastro_cluster <- subset(datos_gastro_cluster, periodo_edad == 3)
-datos_gastro_cluster <- datos_gastro_cluster[,c("edad","mes","municipio_residencia", "tipo_consulta","ano","pueblo_pertenencia")]
+datos_gastro_cluster <- datos_gastro_cluster[,c("edad","mes","deptoresiden", "tipo_consulta","ano","pueblo_pertenencia")]
 datos_gastro_cluster[is.na(datos_gastro_cluster)] <- -1
 cluster_gastro <- kmeans(datos_gastro_cluster, centers = 2)
 
 datos_gastro_cluster$deptoresiden <- factor(datos_gastro_cluster$deptoresiden)
 
 
-ggplot(datos_gastro_cluster, aes(x = mes, y = pueblo_pertenencia, color =as.factor(cluster_gastro$cluster)))+
+ggplot(datos_gastro_cluster, aes(x = mes, y = deptoresiden, color =as.factor(cluster_gastro$cluster)))+
   geom_point()+
-  geom_point(data = as.data.frame(cluster_gastro$centers), aes(x = mes, y = pueblo_pertenencia), color="black", size=4, shape=17)+
-  labs(title = "Casos de gastro y su relación en la edad de pacientes vs departamentos de los casos") +
+  geom_point(data = as.data.frame(cluster_gastro$centers), aes(x = mes, y = deptoresiden), color="black", size=4, shape=17)+
+  labs(title = "Casos de gastro y su relación en los meses vs departamentos de los casos") +
   theme_minimal()
