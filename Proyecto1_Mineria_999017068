@@ -142,6 +142,7 @@ ggplot(datos_gastro_cluster, aes(x = mes, y = deptoresiden, color =as.factor(clu
 #Caso 2: Patrón geográfico-temporal por sexo 
 
 datos_cluster3 <- datos[, c("mes", "deptoresiden", "sexo", "tipo_consulta")]
+datos_gastro_cluster <- subset(datos_gastro_cluster, deptoresiden != 99)
 datos_cluster3 <- na.omit(datos_cluster3)          
 datos_cluster3[is.na(datos_cluster3)] <- -1       
 
