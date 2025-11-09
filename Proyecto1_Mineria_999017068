@@ -121,7 +121,7 @@ rf_xinka <- as(reglas_xinka, "data.frame")
 
 
 #PARTE 3 CLUSTER
-#Caso 1: enfermedad de Gastroenteritis y colitis de origen no especificado en relacion con el mes en que sucede mes y el departamento
+#Caso 1: Casos de Gastroenteritis según Mes y Departamento
 datos_gastro_cluster <- subset(datos, causa_atencion ==  "A099")
 datos_gastro_cluster <- subset(datos_gastro_cluster, deptoresiden != 99)
 datos_gastro_cluster <- subset(datos_gastro_cluster, periodo_edad == 3)
@@ -139,25 +139,23 @@ ggplot(datos_gastro_cluster, aes(x = mes, y = deptoresiden, color =as.factor(clu
   theme_minimal()
 
 
-#Caso 2: Patrón geográfico-temporal por sexo 
+#Caso 2: Segmentación por Edad y Causa de Atención
 
-datos_cluster3 <- datos[, c("mes", "deptoresiden", "sexo", "tipo_consulta")]
-datos_gastro_cluster <- subset(datos_gastro_cluster, deptoresiden != 99)
-datos_cluster3 <- na.omit(datos_cluster3)          
-datos_cluster3[is.na(datos_cluster3)] <- -1       
-
-set.seed(123)                                    
-cluster3 <- kmeans(datos_cluster3, centers = 2)
-
-datos_cluster3$cluster <- as.factor(cluster3$cluster)
-
-datos_cluster3$deptoresiden <- as.factor(datos_cluster3$deptoresiden)
-
-ggplot(datos_cluster3, aes(x = mes, y = deptoresiden, color = cluster)) +
-  geom_point(alpha = 0.6) +
-  geom_point(data = as.data.frame(cluster3$centers), 
-             aes(x = mes, y = deptoresiden), 
-             color = "black", size = 4, shape = 17) +
-  labs(title = "Clúster de patrones geográficos/estacionales por sexo",
-       x = "Mes", y = "Departamento de Residencia") +
+set.seed(123) 
+muestra <- datos[sample(1:nrow(datos), 40000), c("sexo", "causa_atencion","periodo_edad", "deptoresiden", "tipo_consulta")]
+muestra_num <- data.frame(
+  sexo           = as.numeric(muestra$sexo),
+  causa_atencion = as.numeric(muestra$causa_atencion),
+  periodo_edad   = as.numeric(muestra$periodo_edad),
+  deptoresiden   = as.numeric(muestra$deptoresiden),
+  tipo_consulta  = as.numeric(muestra$tipo_consulta)
+)
+set.seed(123) 
+kmeans_model <- kmeans(muestra_num, centers = 4, nstart = 25)
+muestra$cluster <- factor(kmeans_model$cluster)
+library(ggplot2)
+ggplot(muestra, aes(x = periodo_edad, y = causa_atencion, color = cluster)) +
+  geom_jitter(alpha = 0.3, width = 0.2, height = 0.2) +
+  labs(title = "Clusters de K-means: Causa vs. Periodo de Edad",
+       x = "Periodo de Edad", y = "Causa de Atención") +
   theme_minimal()
