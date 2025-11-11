@@ -1,0 +1,28 @@
+library(readxl)
+library(rpart)
+library(rpart.plot)
+
+data <- read_excel("C:\\Users\\Daniel\\Downloads\\base-de-datos-violencia-intrafamiliar-ano-2024_v3 (2).xlsx")
+
+data.frame(1:ncol(data), colnames(data))
+
+arbol <- rpart( AGR_SEXO ~ 
+                  VIC_EDAD +
+                  VIC_SEXO +
+                  VIC_ESCOLARIDAD,
+                 data = data, method = "class"
+)
+rpart.plot(arbol, type = 2, extra =0, under = TRUE, fallen.leaves =TRUE, box.palette ="BuGn",
+           main ="Sexo del Agresor", cex = 0.5
+           
+)
+
+persona <- data.frame(
+  VIC_EDAD = c(10),
+  VIC_SEXO = c(2),
+  VIC_ESCOLARIDAD = c(22)
+  
+)
+
+result <- predict(arbol, persona, type = "prob")
+result
